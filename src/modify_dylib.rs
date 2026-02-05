@@ -1,64 +1,4 @@
-
-
-fn read_uint32(data: &[u8], offset: usize) -> u32 {
-    let value:u32 =  data[offset] as u32
-        | ((data[offset + 1] as u32) << 8)
-        | ((data[offset + 2] as u32) << 16)
-        | ((data[offset + 3] as u32) << 24);
-    return value;
-}
-
-fn read_uint32_be(data: &[u8], offset: usize) -> u32 {
-    let value:u32 =  ((data[offset] as u32) << 24)
-        | ((data[offset + 1] as u32) << 16)
-        | ((data[offset + 2] as u32) << 8)
-        | (data[offset + 3] as u32);
-    return value;
-}
-
-#[warn(dead_code)]
-fn write_uint32(data: &mut [u8], offset: usize, value: u32) {
-    data[offset] = (value & 0xFF) as u8;
-    data[offset + 1] = ((value >> 8) & 0xFF) as u8;
-    data[offset + 2] = ((value >> 16) & 0xFF) as u8;
-    data[offset + 3] = ((value >> 24) & 0xFF) as u8;
-}
-
-fn read_uleb128(data: &[u8], offset: &mut usize) -> u128 {
-    let mut result: u128 = 0;
-    let mut shift: u32 = 0;
-    loop {
-        let byte = data[*offset];
-        *offset += 1;
-        result |= ((byte & 0x7F) as u128) << shift;
-        println!("byte: {:x}, result: {:x}, shift: {:x},offset: {:x}", byte, result, shift,*offset-1);
-        if (byte & 0x80) == 0 {
-            break;
-        }
-        shift += 7;
-    }
-    return result;
-}
-
-fn read_sleb128(data: &[u8], offset: &mut usize) -> i128 {
-    let mut result: i128 = 0;
-    let mut shift: u32 = 0;
-    let mut byte: u8;
-    loop {
-        byte = data[*offset];
-        *offset += 1;
-        result |= ((byte & 0x7F) as i128) << shift;
-        shift += 7;
-        if (byte & 0x80) == 0 {
-            break;
-        }
-    }
-    // Sign extend if necessary
-    if byte & 0x40 != 0 {
-        result -= 1 << shift;
-    }
-    return result;
-}
+use crate::buffer_helper::{read_uint32, read_uint32_be, read_uleb128, read_sleb128};
 
 fn modify_dylib_symbols(fat_data: &mut [u8],fat_offset: usize,size: usize, old_ordinal: i32, new_ordinal: i32) {
     let data=&mut fat_data[fat_offset..fat_offset+size];
@@ -169,9 +109,7 @@ fn modify_dylib_symbols(fat_data: &mut [u8],fat_offset: usize,size: usize, old_o
     }
 }
 
-pub fn modify_dylib(file: String, old_ordinal: i32, new_ordinal: i32) {
-    let mut fat_data = std::fs::read(&file).expect("Failed to read file");
-
+pub fn modify_dylib(fat_data: &mut [u8], old_ordinal: i32, new_ordinal: i32) {
     let magic = read_uint32(&fat_data, 0);
     if magic == 0xbebafeca {
         let nfat_arch = read_uint32_be(&fat_data, 4);
@@ -179,14 +117,13 @@ pub fn modify_dylib(file: String, old_ordinal: i32, new_ordinal: i32) {
         for _i in 0..nfat_arch {
             let arch_offset: usize = read_uint32_be(&fat_data, offset + 8) as usize;
             let arch_size: usize = read_uint32_be(&fat_data, offset + 12) as usize;
-            modify_dylib_symbols(&mut fat_data, arch_offset, arch_size, old_ordinal, new_ordinal);
+            modify_dylib_symbols(fat_data, arch_offset, arch_size, old_ordinal, new_ordinal);
             offset += 20;
         }
     }else if magic == 0xFEEDFACF {
         let size = fat_data.len() as usize;
-        modify_dylib_symbols(&mut fat_data, 0, size, old_ordinal, new_ordinal);
+        modify_dylib_symbols(fat_data, 0, size, old_ordinal, new_ordinal);
     }
-
-    std::fs::write(&file, &fat_data).expect("Failed to write file");
+    
 }
 
