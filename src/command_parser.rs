@@ -32,37 +32,18 @@ Commands:
   -list
       List all load commands in the Mach-O binary.
 
-  -from <OLD> -to <NEW> <TARGET>
-      Replace a dylib path or library ordinal.
-        - If <OLD> is a path (e.g., @rpath/libfoo.dylib), replace it with <NEW>.
-        - If <OLD> is an ordinal (e.g., "2"), change references from that library to <NEW>.
+  -change <OLD> -to <NEW> <TARGET>
+      Replace a library ordinal.
         - Special ordinals: 
             "-1" → main executable,
             "-2" → dynamic lookup (flat namespace).
-
-  -change <SYMBOL_SPEC> -from <OLD> -to <new> <TARGET>
-      Change symbol binding for specific symbols from a given dylib.
-        - <SYMBOL_SPEC> can be:
-            • A literal symbol name (e.g., "_lua_newstate")
-            • A regex pattern (e.g., "_luaL?_.*")
-            • A file path containing symbol names (e.g., "symbols.txt")
-
-  -add <DYLIB_PATH> <TARGET>
-      Insert a new dylib at the beginning of the load command list.
-
-  -delete <DYLIB_PATH> <TARGET>
-      Remove the first occurrence of the specified dylib and exit.
 
 Arguments:
   <TARGET>    Path to the Mach-O binary (e.g., my/app/xxx.framework/xxx)
 
 Examples:
   facho -list MyApp
-  facho -from @rpath/libA.dylib -to @rpath/libB.dylib MyApp
-  facho -from "2" -to "3" MyApp
-  facho -change "_luaL?_.*" -from @rpath/libLua.dylib -to "-2" MyApp
-  facho -add @rpath/new.dylib MyApp
-  facho -delete @rpath/old.dylib MyApp
+  facho -change "2" -to "3" MyApp
 "#;
 
 impl<'a> command_parser<'a> {
@@ -76,7 +57,7 @@ impl<'a> command_parser<'a> {
         while let Some(_arg)=iter.next(){
             print!("Parsing arg: {}\n",_arg);
             match _arg.as_str(){
-                "-change"=>{
+                "-for"=>{
                     change_arg=Option::Some(iter.next().unwrap().as_str());
                 },
                 "-add"=>{
@@ -99,7 +80,7 @@ impl<'a> command_parser<'a> {
                         target_file:iter.next().unwrap(),
                     });
                 },
-                "-from"=>{
+                "-change"=>{
                     from_arg=iter.next();
                 },
                 "-to"=>{

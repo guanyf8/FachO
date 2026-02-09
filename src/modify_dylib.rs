@@ -1,6 +1,6 @@
 use crate::buffer_helper::{read_uint32, read_uint32_be, read_uleb128, read_sleb128};
 
-fn modify_dylib_symbols(fat_data: &mut [u8],fat_offset: usize,size: usize, old_ordinal: i32, new_ordinal: i32) {
+fn modify_dylib_ordinal(fat_data: &mut [u8],fat_offset: usize,size: usize, old_ordinal: i32, new_ordinal: i32) {
     let data=&mut fat_data[fat_offset..fat_offset+size];
     
     let magic = read_uint32(data, 0);
@@ -109,7 +109,7 @@ fn modify_dylib_symbols(fat_data: &mut [u8],fat_offset: usize,size: usize, old_o
     }
 }
 
-pub fn modify_dylib(fat_data: &mut [u8], old_ordinal: i32, new_ordinal: i32) {
+pub fn modify_fat_ordinal(fat_data: &mut [u8], old_ordinal: i32, new_ordinal: i32) {
     let magic = read_uint32(&fat_data, 0);
     if magic == 0xbebafeca {
         let nfat_arch = read_uint32_be(&fat_data, 4);
@@ -117,12 +117,12 @@ pub fn modify_dylib(fat_data: &mut [u8], old_ordinal: i32, new_ordinal: i32) {
         for _i in 0..nfat_arch {
             let arch_offset: usize = read_uint32_be(&fat_data, offset + 8) as usize;
             let arch_size: usize = read_uint32_be(&fat_data, offset + 12) as usize;
-            modify_dylib_symbols(fat_data, arch_offset, arch_size, old_ordinal, new_ordinal);
+            modify_dylib_ordinal(fat_data, arch_offset, arch_size, old_ordinal, new_ordinal);
             offset += 20;
         }
     }else if magic == 0xFEEDFACF {
         let size = fat_data.len() as usize;
-        modify_dylib_symbols(fat_data, 0, size, old_ordinal, new_ordinal);
+        modify_dylib_ordinal(fat_data, 0, size, old_ordinal, new_ordinal);
     }
     
 }

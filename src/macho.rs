@@ -21,6 +21,11 @@ pub struct lc_load_dylib<'a>{
     pub name:&'a str
 }
 
+trait load_command_trait {
+    fn get_cmd(&self) -> u32;
+    fn get_cmdsize(&self) -> u32;
+}
+
 pub struct other_command{
     pub cmd:u32,
     pub cmdsize:u32,
