@@ -9,6 +9,8 @@ It can be used to modify the sources of symbols by change the ordinal of the dyl
 facho -list my/local/path/xxx.framework/xxx
 
 facho -change "2" -to "3" my/local/path/xxx.framework/xxx # change ordinals 2 to 3, so symbols used to belonged to 2 will find their implementations in 3
+
+facho -show _luaL_newstate my/local/path/xxx.framework/xxx  # 查看该符号依赖于哪个动态库
 ```
 
 

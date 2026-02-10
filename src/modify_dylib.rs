@@ -1,7 +1,6 @@
 use crate::buffer_helper::{read_uint32, read_uint32_be, read_uleb128, read_sleb128};
 
-fn modify_dylib_ordinal(fat_data: &mut [u8],fat_offset: usize,size: usize, old_ordinal: i32, new_ordinal: i32) {
-    let data=&mut fat_data[fat_offset..fat_offset+size];
+fn modify_dylib_ordinal(data: &mut [u8],old_ordinal: i32, new_ordinal: i32) {
     
     let magic = read_uint32(data, 0);
     if magic != 0xFEEDFACF {
@@ -37,8 +36,8 @@ fn modify_dylib_ordinal(fat_data: &mut [u8],fat_offset: usize,size: usize, old_o
                         index+=1;
                         read_uleb128(data,&mut index);
                     }else if opcode == 0x30{  // # BIND_OPCODE_SET_DYLIB_SPECIAL_IMM
-                        let trans_immediate = (byte | 0xf0) as i32;
-                        if trans_immediate == old_ordinal{
+                        let trans_immediate = (byte | 0xf0) as i8;
+                        if trans_immediate == old_ordinal as i8{
                             data[index]=if new_ordinal<0 {0x30}else{0x10} | ((new_ordinal & 0x0F) as u8);
                         }
                         index+=1;
@@ -97,8 +96,8 @@ fn modify_dylib_ordinal(fat_data: &mut [u8],fat_offset: usize,size: usize, old_o
                     // | ((data[index+15] as u64)<<56);
 
                 if desc!=0{
-                    let ordinal:i32=data[index+7] as i32;
-                    if ordinal==old_ordinal{
+                    let ordinal:i8=data[index+7] as i8;
+                    if ordinal==old_ordinal as i8{
                         data[index+7]=(new_ordinal&0xff) as u8;
                     }
                 }
@@ -117,12 +116,12 @@ pub fn modify_fat_ordinal(fat_data: &mut [u8], old_ordinal: i32, new_ordinal: i3
         for _i in 0..nfat_arch {
             let arch_offset: usize = read_uint32_be(&fat_data, offset + 8) as usize;
             let arch_size: usize = read_uint32_be(&fat_data, offset + 12) as usize;
-            modify_dylib_ordinal(fat_data, arch_offset, arch_size, old_ordinal, new_ordinal);
+            modify_dylib_ordinal(&mut fat_data[arch_offset..arch_offset+arch_size], old_ordinal, new_ordinal);
             offset += 20;
         }
     }else if magic == 0xFEEDFACF {
         let size = fat_data.len() as usize;
-        modify_dylib_ordinal(fat_data, 0, size, old_ordinal, new_ordinal);
+        modify_dylib_ordinal(&mut fat_data[0..size], old_ordinal, new_ordinal);
     }
     
 }

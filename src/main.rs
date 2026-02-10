@@ -6,19 +6,7 @@ mod modify_dylib;
 mod macho;
 mod buffer_helper;
 mod command_parser;
-
-fn modify_ordinal(fat_data: &mut [u8], old_ordinal: i32, new_ordinal: i32)  {
-    // Placeholder implementation
-    modify_dylib::modify_fat_ordinal(fat_data, old_ordinal, new_ordinal);
-}
-
-fn change(file: &str,symbols:Option<String>,from:&str,to:&str){
-    let old_ordinal: i32 = from.parse().expect("Invalid old ordinal");
-    let new_ordinal: i32 = to.parse().expect("Invalid new ordinal");
-    let mut fat_data = std::fs::read(&file).expect("Failed to read file");
-    
-    std::fs::write(&file, &fat_data).expect("Failed to write file");
-}
+mod show_dylib;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -31,7 +19,6 @@ fn main() {
     let command=result.unwrap();
     match command.command {
         command_parser::command_type::CHANGE_COMMAND(change_cmd)=>{
-            println!("Change command: from {} to {}",change_cmd.from,change_cmd.to);
             let file= command.target_file;
             let old_ordinal: i32 = change_cmd.from.parse().expect("Invalid old ordinal");
             let new_ordinal: i32 = change_cmd.to.parse().expect("Invalid new ordinal");
@@ -43,31 +30,31 @@ fn main() {
         command_parser::command_type::ADD_COMMAND(add_cmd)=>{
             println!("Not Yet Support");
         },
+        command_parser::command_type::SHOW_COMMAND(show_cmd)=>{
+            let symbol_to_find = show_cmd.show;
+            let file= command.target_file;
+            let mut file_data = std::fs::read(&file).expect("Failed to read file");
+            match show_dylib::show_dylib_symbols(&mut file_data, symbol_to_find){
+                Some(ordinal)=>{
+                    println!("{}", ordinal);
+                },
+                None=>{
+                }
+            }
+        },
         command_parser::command_type::DELETE_COMMAND(delete_cmd)=>{
             println!("Not Yet Support");
         },
         command_parser::command_type::LIST_COMMAND=>{
             let file= command.target_file;
             let file_data = std::fs::read(&file).expect("Failed to read file");
-            let macho_instance = macho::macho64::parse(&file_data);
-            let mut iter=macho_instance.load_commands.iter();
-            let mut i=1;
-            while let Some(cmd) = iter.next() {
-                
-                match cmd {
-                    macho::load_command::LC_LOAD_DYLIB(dylib_cmd) => {
-                        println!("Found LC_LOAD_DYLIB: {}, ordinal = {}", dylib_cmd.name,i);
-                        i+=1;
-                    }
-                    _ => {}
-                }
-            }
-            println!("Parsed macho64: ncmds = {}", macho_instance.header.ncmds);
+            show_dylib::list_load_dylibs(&file_data);
         },
         _=>{
-            eprintln!("Usage: [-change symbols] -from <old_ordinal> to <new_ordinal>");
+            eprintln!("Usage: -change <old_ordinal> to <new_ordinal>");
             return;
         },
     }
+    
 
 }

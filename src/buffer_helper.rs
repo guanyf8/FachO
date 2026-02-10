@@ -31,7 +31,6 @@ pub fn read_uleb128(data: &[u8], offset: &mut usize) -> u128 {
         let byte = data[*offset];
         *offset += 1;
         result |= ((byte & 0x7F) as u128) << shift;
-        println!("byte: {:x}, result: {:x}, shift: {:x},offset: {:x}", byte, result, shift,*offset-1);
         if (byte & 0x80) == 0 {
             break;
         }

@@ -21,17 +21,11 @@ pub struct lc_load_dylib<'a>{
     pub name:&'a str
 }
 
-trait load_command_trait {
-    fn get_cmd(&self) -> u32;
-    fn get_cmdsize(&self) -> u32;
-}
-
 pub struct other_command{
     pub cmd:u32,
     pub cmdsize:u32,
     // other fields as needed
 }
-
 pub enum load_command<'a>{
     LC_LOAD_DYLIB(lc_load_dylib<'a>),
     OTHER_COMMAND(other_command),
@@ -92,7 +86,3 @@ impl<'a> macho64<'a>{
         return macho64 { header, load_commands };
     }
 }
-
-
-
-
