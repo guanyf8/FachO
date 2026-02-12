@@ -1,12 +1,11 @@
 use std::result;
 
-
-
-mod modify_dylib;
+mod task;
 mod macho;
-mod buffer_helper;
+mod bytes_helper;
 mod command_parser;
-mod show_dylib;
+
+use macho::{macho64::macho64, fat_macho::fat_macho, macho::macho_handler};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -17,44 +16,21 @@ fn main() {
         return;
     }
     let command=result.unwrap();
-    match command.command {
-        command_parser::command_type::CHANGE_COMMAND(change_cmd)=>{
-            let file= command.target_file;
-            let old_ordinal: i32 = change_cmd.from.parse().expect("Invalid old ordinal");
-            let new_ordinal: i32 = change_cmd.to.parse().expect("Invalid new ordinal");
-            let mut file_data = std::fs::read(&file).expect("Failed to read file");
-            modify_dylib::modify_fat_ordinal(&mut file_data, old_ordinal, new_ordinal);
-            std::fs::write(&file, &file_data).expect("Failed to write file");
-  
-        },
-        command_parser::command_type::ADD_COMMAND(add_cmd)=>{
-            println!("Not Yet Support");
-        },
-        command_parser::command_type::SHOW_COMMAND(show_cmd)=>{
-            let symbol_to_find = show_cmd.show;
-            let file= command.target_file;
-            let mut file_data = std::fs::read(&file).expect("Failed to read file");
-            match show_dylib::show_dylib_symbols(&mut file_data, symbol_to_find){
-                Some(ordinal)=>{
-                    println!("{}", ordinal);
-                },
-                None=>{
-                }
-            }
-        },
-        command_parser::command_type::DELETE_COMMAND(delete_cmd)=>{
-            println!("Not Yet Support");
-        },
-        command_parser::command_type::LIST_COMMAND=>{
-            let file= command.target_file;
-            let file_data = std::fs::read(&file).expect("Failed to read file");
-            show_dylib::list_load_dylibs(&file_data);
-        },
-        _=>{
-            eprintln!("Usage: -change <old_ordinal> to <new_ordinal>");
-            return;
-        },
+    let mut file_data = std::fs::read(&command.target_file).expect("Failed to read file");
+    let magic_number: u32 = bytes_helper::read_uint32(&file_data, 0);
+    let mut macho_handler: Box<dyn macho_handler>;
+    if magic_number == 0xbebafeca {
+        let fat_macho = fat_macho::parse(&file_data);
+        macho_handler = Box::new(fat_macho);
+    } else if magic_number == 0xFEEDFACF {
+        let macho = macho64::parse(&file_data);
+         macho_handler = Box::new(macho);
+    } else {
+        eprintln!("Unsupported file format");
+        return;
     }
-    
+    macho_handler.process(&command.command).expect("Failed to process command");
+    let final_data=macho_handler.write_back();
+    std::fs::write(&command.target_file, final_data).expect("Failed to write file");
 
 }

@@ -16,6 +16,18 @@ pub fn read_uint32_be(data: &[u8], offset: usize) -> u32 {
     return value;
 }
 
+pub fn read_uint64(data: &[u8], offset: usize) -> u64 {
+    let value:u64 =  data[offset] as u64
+        | ((data[offset + 1] as u64) << 8)
+        | ((data[offset + 2] as u64) << 16)
+        | ((data[offset + 3] as u64) << 24)
+        | ((data[offset + 4] as u64) << 32)
+        | ((data[offset + 5] as u64) << 40)
+        | ((data[offset + 6] as u64) << 48)
+        | ((data[offset + 7] as u64) << 56);
+    return value;
+}
+
 #[warn(dead_code)]
 pub fn write_uint32(data: &mut [u8], offset: usize, value: u32) {
     data[offset] = (value & 0xFF) as u8;
