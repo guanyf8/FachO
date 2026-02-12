@@ -178,3 +178,52 @@ impl macho32{
         return macho32 { header, load_commands, data: data.to_vec() };
     }
 }
+
+use crate::task::{modify_dylib, show_dylib};
+
+impl macho_handler for macho32{
+    fn get_data(&self)->(&Vec<u8>,&Vec<load_command>){
+        (&self.data,&self.load_commands)
+    }
+
+    fn get_data_mut(&mut self)->(&mut Vec<u8>,&Vec<load_command>) {
+        (&mut self.data,&self.load_commands)
+    }
+
+    fn get_magic_number(&self)->u32 {
+        self.header.magic
+    }
+
+    fn write_back(&self)->Vec<u8> {
+        self.data.clone()
+    }
+
+    fn process(&mut self, command:&command_type)->Result<(),String> {
+         match command{
+            command_type::CHANGE_COMMAND(change_cmd)=>{
+                modify_dylib::modify_dylib_ordinal(self, change_cmd.from.parse().unwrap(), change_cmd.to.parse().unwrap());
+                Ok(())
+            },
+            command_type::ADD_COMMAND(add_cmd)=>{
+                
+                Ok(())
+            },
+            command_type::SHOW_COMMAND(show_cmd)=>{
+                show_dylib::show_dylib_symbols(self, &show_cmd.show);
+                Ok(())
+            },
+            command_type::DELETE_COMMAND(delete_cmd)=>{
+                // Implement the logic to delete a specific load command
+                Ok(())
+            },
+            command_type::LIST_COMMAND=>{
+                show_dylib::list_load_dylibs(self);
+                Ok(())
+            },
+            _=>{
+                Err("Unsupported command".to_string())
+            },
+        }
+    }
+
+}
