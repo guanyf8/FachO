@@ -55,7 +55,7 @@ Examples:
 "#;
 
 impl<'a> command_parser<'a> {
-    pub fn parse(args: &'a Vec<String>)->Result<command_parser<'a>,String>{
+    pub fn parse<'b>(args: &'a [String])->Result<command_parser<'a>,String>{
         let mut iter= args.iter();
         
         let mut change_arg:Option<&'a str>=None;

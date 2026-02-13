@@ -1,5 +1,3 @@
-use std::result;
-
 mod task;
 mod macho;
 mod bytes_helper;
@@ -9,8 +7,8 @@ use macho::{macho64::macho64, fat_macho::fat_macho, macho::macho_handler};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let real_arg:Vec<String>=args[1..].to_vec();
-    let result=command_parser::command_parser::parse(&real_arg);
+    let real_arg=&args[1..];
+    let result=command_parser::command_parser::parse(real_arg);
     if let Err(e)=result{
         eprintln!("Error: {}",e);
         return;
