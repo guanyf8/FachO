@@ -94,12 +94,18 @@ impl<'a> command_parser<'a> {
                     to_arg=iter.next();
                 },
                 "-list"=>{
+                    if(args.len()<2){
+                        return Err(HELP_MESSAGE.to_string());
+                    }
                     return Ok(command_parser{
                         command:command_type::LIST_COMMAND,
                         target_file:iter.next().unwrap(),
                     });
                 },
                 "-show"=>{
+                    if(args.len()<3){
+                        return Err(HELP_MESSAGE.to_string());
+                    }
                     return Ok(command_parser{
                         command:command_type::SHOW_COMMAND(
                             show{
